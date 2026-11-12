@@ -126,8 +126,8 @@
   <!-- GEREEDSCHAP -->
   <section id="tab-tools">
     <div class="card">
-      <h2 id="toolFormTitle" class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span><span id="toolFormTitleText">Nieuw gereedschap toevoegen</span></h2>
-      <div class="card-body">
+      <h2 id="toolFormTitle" class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span><span id="toolFormTitleText">Nieuw gereedschap toevoegen</span></h2>
+      <div class="card-body" hidden>
       <form id="toolForm">
         <input type="hidden" id="toolId" />
         <div class="grid">
@@ -153,8 +153,8 @@
     </div>
 
     <div class="card" id="catsCard">
-      <h2 class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span>Categorieën beheren</h2>
-      <div class="card-body">      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
+      <h2 class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span>Categorieën beheren</h2>
+      <div class="card-body" hidden>      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
         <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
         <button class="btn" type="submit">Toevoegen</button>
       </form>
@@ -206,8 +206,8 @@
     </div>
 
     <div class="card" id="personsCard">
-      <h2 class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span>Personen beheren</h2>
-      <div class="card-body">
+      <h2 class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span>Personen beheren</h2>
+      <div class="card-body" hidden>
       <form id="personForm" style="display:flex; gap:8px; margin-bottom:12px;">
         <input id="newPerson" placeholder="Nieuwe persoon, bijv. Jan de Vries" style="max-width:280px;" />
         <button class="btn" type="submit">Toevoegen</button>
