@@ -4,22 +4,32 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gereedschapsregister</title>
-<meta name="theme-color" content="#2563eb" />
+<meta name="theme-color" content="#12372a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Gereedschap" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2312372a'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E" />
 <style>
   :root {
-    --bg: #f4f5f7;
+    --bg: #f5f2ea;
     --card: #ffffff;
-    --ink: #1f2937;
-    --muted: #6b7280;
-    --accent: #2563eb;
-    --accent-dark: #1d4ed8;
-    --ok: #16a34a;
-    --warn: #dc2626;
-    --border: #e5e7eb;
+    --ink: #16211b;
+    --muted: #7a8580;
+    --green-900: #0e2b20;
+    --green-800: #12372a;
+    --green-700: #1b4d3a;
+    --green-100: #dcebe2;
+    --yellow: #f2d24b;
+    --yellow-dark: #e3bd2e;
+    --ok: #1b7a4b;
+    --ok-bg: #dcefe3;
+    --warn: #b45309;
+    --warn-bg: #fbeed3;
+    --danger: #b3261e;
+    --danger-bg: #f9e0de;
+    --border: #e7e2d6;
+    --shadow: 0 6px 18px rgba(18, 55, 42, .07);
+    --radius: 20px;
   }
   * { box-sizing: border-box; }
   body {
@@ -28,70 +38,115 @@
     background: var(--bg);
     color: var(--ink);
   }
-  header {
-    background: var(--accent);
-    color: #fff;
-    padding: 16px 24px;
+
+  /* ---------- Layout met zijbalk ---------- */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: var(--green-800); color: #fff;
+    padding: 24px 16px;
+    display: flex; flex-direction: column; gap: 24px;
+    position: sticky; top: 0; height: 100vh;
   }
-  header h1 { margin: 0; font-size: 1.3rem; }
-  header p { margin: 4px 0 0; opacity: .85; font-size: .85rem; }
-  main { max-width: 1000px; margin: 0 auto; padding: 20px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+  .brand .logo {
+    width: 38px; height: 38px; border-radius: 12px; background: var(--yellow);
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+  }
+  .brand h1 { margin: 0; font-size: 1.05rem; line-height: 1.2; }
+  .brand small { color: rgba(255,255,255,.6); font-size: .72rem; }
+  .tabs { display: flex; flex-direction: column; gap: 6px; }
   .tabs button {
-    padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--card); cursor: pointer; font-size: .95rem;
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px; border: none; border-radius: 12px;
+    background: transparent; color: rgba(255,255,255,.85);
+    cursor: pointer; font-size: .95rem; text-align: left; width: 100%;
   }
-  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tabs button:hover { background: rgba(255,255,255,.08); }
+  .tabs button.active { background: var(--green-900); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-footer .btn { width: 100%; }
+
+  main { flex: 1; padding: 28px 32px; max-width: 1060px; }
+
+  /* ---------- Kaarten ---------- */
   .card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+    background: var(--card); border: none;
+    border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+    box-shadow: var(--shadow);
   }
-  .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .card h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
   .card h2.toggle { cursor: pointer; user-select: none; margin-bottom: 0; }
-  .card h2.toggle .chev { display: inline-block; transition: transform .15s; margin-right: 6px; font-size: .8rem; color: var(--muted); }
+  .card h2.toggle .chev { display: inline-block; transition: transform .15s; margin-right: 8px; font-size: .75rem; color: var(--muted); }
   .card h2.toggle.open .chev { transform: rotate(90deg); }
   .card h2.toggle.open { margin-bottom: 12px; }
-  label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+  label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
   input, select, textarea {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
-    border-radius: 8px; font-size: .95rem; font-family: inherit; background: #fff;
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: .95rem; font-family: inherit;
+    background: #fff; color: var(--ink);
   }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  input:focus, select:focus { outline: 2px solid var(--green-700); outline-offset: 1px; border-color: transparent; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+
+  /* ---------- Knoppen ---------- */
   .btn {
-    padding: 9px 20px; border: none; border-radius: 8px; cursor: pointer;
-    background: var(--accent); color: #fff; font-size: .95rem;
+    padding: 10px 20px; border: none; border-radius: 999px; cursor: pointer;
+    background: var(--green-800); color: #fff; font-size: .95rem; font-weight: 600;
   }
-  .btn:hover { background: var(--accent-dark); }
-  .btn.secondary { background: #e5e7eb; color: var(--ink); }
-  .btn.small { padding: 4px 10px; font-size: .8rem; }
-  .btn.danger { background: #fee2e2; color: var(--warn); }
-  .header-btn { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.5); }
-  .header-btn:hover { background: rgba(255,255,255,.3); }
+  .btn:hover { background: var(--green-900); }
+  .btn.secondary { background: var(--green-100); color: var(--green-800); }
+  .btn.secondary:hover { background: #cfe3d6; }
+  .btn.small { padding: 6px 13px; font-size: .8rem; }
+  .btn.danger { background: var(--danger-bg); color: var(--danger); }
+  .btn.danger:hover { background: #f2cdc9; }
+  .btn.yellow { background: var(--yellow); color: var(--ink); }
+  .btn.yellow:hover { background: var(--yellow-dark); }
+
+  /* ---------- Tabellen ---------- */
   table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); }
-  td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tr:hover td { background: #f8fafc; }
-  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
-  .badge.terug { background: #dcfce7; color: var(--ok); }
-  .badge.uitleen { background: #fef3c7; color: #b45309; }
-  .badge.overdue { background: #fee2e2; color: var(--warn); }
+  th { text-align: left; color: var(--muted); font-weight: 700; padding: 10px 10px; border-bottom: 2px solid var(--border); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf8f3; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+  .badge.terug { background: var(--ok-bg); color: var(--ok); }
+  .badge.uitleen { background: var(--warn-bg); color: var(--warn); }
+  .badge.overdue { background: var(--danger-bg); color: var(--danger); }
+
+  /* ---------- Melding ---------- */
   .alert {
-    background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
-    border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; font-size: .92rem;
+    background: var(--danger-bg); color: #7f1d1a;
+    border-radius: var(--radius); padding: 18px 22px; margin-bottom: 20px; font-size: .92rem;
+    box-shadow: var(--shadow);
   }
   .alert strong { display: block; margin-bottom: 6px; }
   .alert ul { margin: 0; padding-left: 20px; }
   .alert button { float: right; margin-left: 12px; }
-  #remindDays { max-width: 90px; display: inline-block; width: auto; padding: 4px 8px; }
+
+  /* ---------- Overig ---------- */
+  #remindDays { max-width: 80px; display: inline-block; width: auto; padding: 6px 8px; }
   .reminder-setting { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); flex-wrap: wrap; }
   .empty { color: var(--muted); font-style: italic; padding: 16px 8px; }
-  .toolbar { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-  #search { max-width: 280px; }
-  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-  .stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
-  .stat .num { font-size: 1.6rem; font-weight: 700; }
-  .stat .lbl { font-size: .8rem; color: var(--muted); }
+  .toolbar { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  #search { max-width: 260px; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .stat { flex: 1; min-width: 200px; background: var(--card); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
+  .stat .num { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+  .stat .lbl { font-size: .85rem; color: var(--muted); font-weight: 600; margin-top: 4px; }
+  .stat.highlight { background: var(--yellow); }
+  .stat.highlight .lbl { color: rgba(22,33,27,.65); }
   .actions { white-space: nowrap; }
+
+  @media (max-width: 820px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+    .tabs { flex-direction: row; }
+    .tabs button { width: auto; padding: 8px 14px; }
+    .sidebar-footer { margin-top: 0; flex-direction: row; width: auto; }
+    .sidebar-footer .btn { width: auto; }
+    main { padding: 18px 14px; }
+  }
   @media (max-width: 640px) {
     table, thead, tbody, tr, td, th { display: block; }
     thead { display: none; }
@@ -101,22 +156,28 @@
 </style>
 </head>
 <body>
-<header>
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-    <div>
-      <h1>🔧 Gereedschapsregister</h1>
-      <p>Beheer je gereedschap en houd uigeningen bij. Data wordt lokaal in je browser opgeslagen.</p>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🔧</div>
+      <div>
+        <h1>Gereedschapsregister</h1>
+        <small>Lokaal opgeslagen</small>
+      </div>
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn header-btn" id="exportBtn" title="Alles opslaan als JSON-bestand">⬇ Exporteren</button>
-      <button class="btn header-btn" id="importBtn" title="Data laden uit een JSON-bestand">⬆ Importeren</button>
+    <nav class="tabs">
+      <button class="active" data-tab="tools">🧰 Gereedschap</button>
+      <button data-tab="loans">🔄 Uitleeningen</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn yellow" id="exportBtn" title="Alles opslaan als JSON-bestand">⬇ Exporteren</button>
+      <button class="btn secondary" id="importBtn" title="Data laden uit een JSON-bestand">⬆ Importeren</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden />
     </div>
-  </div>
-</header>
-<main>
-  <div id="overdueAlert"></div>
-  <div class="stats" id="stats"></div>
+  </aside>
+  <main>
+    <div id="overdueAlert"></div>
+    <div class="stats" id="stats"></div>
 
   <div class="tabs">
     <button class="active" data-tab="tools">Gereedschap</button>
@@ -227,6 +288,7 @@
     </div>
   </section>
 </main>
+</div>
 
 <script>
 const LS_TOOLS = 'gereedschap_tools_v1';
@@ -413,7 +475,7 @@ function renderStats() {
   const el = document.getElementById('stats');
   el.innerHTML = `
     <div class="stat"><div class="num">${tools.length}</div><div class="lbl">Gereedschappen</div></div>
-    <div class="stat"><div class="num">${out}</div><div class="lbl">Nu uitgeleend</div></div>`;
+    <div class="stat highlight"><div class="num">${out}</div><div class="lbl">Nu uitgeleend</div></div>`;
 }
 
 // ---------- Tools ----------
