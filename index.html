@@ -47,6 +47,10 @@
     border-radius: 12px; padding: 20px; margin-bottom: 20px;
   }
   .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .card h2.toggle { cursor: pointer; user-select: none; margin-bottom: 0; }
+  .card h2.toggle .chev { display: inline-block; transition: transform .15s; margin-right: 6px; font-size: .8rem; color: var(--muted); }
+  .card h2.toggle.open .chev { transform: rotate(90deg); }
+  .card h2.toggle.open { margin-bottom: 12px; }
   label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
   input, select, textarea {
     width: 100%; padding: 8px 10px; border: 1px solid var(--border);
@@ -122,7 +126,8 @@
   <!-- GEREEDSCHAP -->
   <section id="tab-tools">
     <div class="card">
-      <h2 id="toolFormTitle">Nieuw gereedschap toevoegen</h2>
+      <h2 id="toolFormTitle" class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span><span id="toolFormTitleText">Nieuw gereedschap toevoegen</span></h2>
+      <div class="card-body">
       <form id="toolForm">
         <input type="hidden" id="toolId" />
         <div class="grid">
@@ -144,14 +149,17 @@
           <button class="btn secondary" type="button" id="toolCancel" hidden>Annuleren</button>
         </div>
       </form>
+      </div>
     </div>
 
     <div class="card" id="catsCard">
-      <h2>Categorieën beheren</h2>      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
+      <h2 class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span>Categorieën beheren</h2>
+      <div class="card-body">      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
         <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
         <button class="btn" type="submit">Toevoegen</button>
       </form>
       <div id="catList"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -198,12 +206,14 @@
     </div>
 
     <div class="card" id="personsCard">
-      <h2>Personen beheren</h2>
+      <h2 class="toggle open" onclick="toggleCard(this)"><span class="chev">▶</span>Personen beheren</h2>
+      <div class="card-body">
       <form id="personForm" style="display:flex; gap:8px; margin-bottom:12px;">
         <input id="newPerson" placeholder="Nieuwe persoon, bijv. Jan de Vries" style="max-width:280px;" />
         <button class="btn" type="submit">Toevoegen</button>
       </form>
       <div id="personListDiv"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -381,6 +391,12 @@ document.getElementById('remindDays').addEventListener('input', e => {
   renderOverdue(); renderLoans(); renderTools();
 });
 
+// ---------- In-/uitklappen ----------
+function toggleCard(h) {
+  h.classList.toggle('open');
+  h.parentElement.querySelector('.card-body').hidden = !h.classList.contains('open');
+}
+
 // ---------- Tabs ----------
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -456,7 +472,7 @@ document.getElementById('toolForm').addEventListener('submit', e => {
 function resetToolForm() {
   toolForm.reset(); toolQty.value = 1;
   toolEditId = null;
-  toolFormTitle.textContent = 'Nieuw gereedschap toevoegen';
+  toolFormTitleText.textContent = 'Nieuw gereedschap toevoegen';
   toolCancel.hidden = true;
 }
 document.getElementById('toolCancel').addEventListener('click', resetToolForm);
@@ -468,9 +484,11 @@ function editTool(id) {
   toolBrand.value = t.brand || ''; toolLoc.value = t.loc || '';
   toolSerial.value = t.serial || '';
   toolQty.value = t.qty || 1; toolNote.value = t.note || '';
-  toolFormTitle.textContent = 'Gereedschap wijzigen';
+  toolFormTitleText.textContent = 'Gereedschap wijzigen';
   toolCancel.hidden = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const h = document.getElementById('toolFormTitle');
+  if (!h.classList.contains('open')) toggleCard(h);
+  h.scrollIntoView({ behavior: 'smooth' });
 }
 
 function delTool(id) {
