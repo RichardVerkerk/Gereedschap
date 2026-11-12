@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gereedschapsregister</title>
+<meta name="theme-color" content="#2563eb" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Gereedschap" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --ok: #16a34a;
+    --warn: #dc2626;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 24px;
+  }
+  header h1 { margin: 0; font-size: 1.3rem; }
+  header p { margin: 4px 0 0; opacity: .85; font-size: .85rem; }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button {
+    padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); cursor: pointer; font-size: .95rem;
+  }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: .95rem; font-family: inherit; background: #fff;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .btn {
+    padding: 9px 20px; border: none; border-radius: 8px; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: .95rem;
+  }
+  .btn:hover { background: var(--accent-dark); }
+  .btn.secondary { background: #e5e7eb; color: var(--ink); }
+  .btn.small { padding: 4px 10px; font-size: .8rem; }
+  .btn.danger { background: #fee2e2; color: var(--warn); }
+  .header-btn { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.5); }
+  .header-btn:hover { background: rgba(255,255,255,.3); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); }
+  td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+  .badge.terug { background: #dcfce7; color: var(--ok); }
+  .badge.uitleen { background: #fef3c7; color: #b45309; }
+  .badge.overdue { background: #fee2e2; color: var(--warn); }
+  .alert {
+    background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; font-size: .92rem;
+  }
+  .alert strong { display: block; margin-bottom: 6px; }
+  .alert ul { margin: 0; padding-left: 20px; }
+  .alert button { float: right; margin-left: 12px; }
+  #remindDays { max-width: 90px; display: inline-block; width: auto; padding: 4px 8px; }
+  .reminder-setting { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); flex-wrap: wrap; }
+  .empty { color: var(--muted); font-style: italic; padding: 16px 8px; }
+  .toolbar { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  #search { max-width: 280px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
+  .stat .num { font-size: 1.6rem; font-weight: 700; }
+  .stat .lbl { font-size: .8rem; color: var(--muted); }
+  .actions { white-space: nowrap; }
+  @media (max-width: 640px) {
+    table, thead, tbody, tr, td, th { display: block; }
+    thead { display: none; }
+    td { border: none; padding: 4px 8px; }
+    tr { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div>
+      <h1>🔧 Gereedschapsregister</h1>
+      <p>Beheer je gereedschap en houd uigeningen bij. Data wordt lokaal in je browser opgeslagen.</p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn header-btn" id="exportBtn" title="Alles opslaan als JSON-bestand">⬇ Exporteren</button>
+      <button class="btn header-btn" id="importBtn" title="Data laden uit een JSON-bestand">⬆ Importeren</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden />
+    </div>
+  </div>
+</header>
+<main>
+  <div id="overdueAlert"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs">
+    <button class="active" data-tab="tools">Gereedschap</button>
+    <button data-tab="loans">Uitleeningen</button>
+  </div>
+
+  <!-- GEREEDSCHAP -->
+  <section id="tab-tools">
+    <div class="card">
+      <h2 id="toolFormTitle">Nieuw gereedschap toevoegen</h2>
+      <form id="toolForm">
+        <input type="hidden" id="toolId" />
+        <div class="grid">
+          <div><label>Naam *</label><input id="toolName" required placeholder="Bijv. Boormachine Bosch" /></div>
+          <div><label>Categorie</label><input id="toolCat" placeholder="Bijv. Elektrisch" /></div>
+          <div><label>Merk / type</label><input id="toolBrand" placeholder="Bijv. GSB 18V" /></div>
+          <div><label>Locatie</label><input id="toolLoc" placeholder="Bijv. Schuur, kast 2" /></div>
+          <div><label>Aantal</label><input id="toolQty" type="number" min="1" value="1" /></div>
+          <div><label>Opmerking</label><input id="toolNote" placeholder="Optioneel" /></div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:8px;">
+          <button class="btn" type="submit">Opslaan</button>
+          <button class="btn secondary" type="button" id="toolCancel" hidden>Annuleren</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">Mijn gereedschap</h2>
+        <div class="reminder-setting">
+          <span>⏰ Herinnering na</span>
+          <input type="number" id="remindDays" min="1" value="14" />
+          <span>dagen uitgeleend</span>
+        </div>
+        <input id="search" placeholder="Zoeken…" />
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Naam</th><th>Categorie</th><th>Merk/type</th><th>Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
+          <tbody id="toolRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- UITLEENINGEN -->
+  <section id="tab-loans" hidden>
+    <div class="card">
+      <h2 id="loanFormTitle">Nieuwe uitleening</h2>
+      <form id="loanForm">
+        <input type="hidden" id="loanId" />
+        <div class="grid">
+          <div><label>Gereedschap *</label><select id="loanTool" required></select></div>
+          <div><label>Uitgeleend aan *</label><input id="loanWho" required placeholder="Naam persoon" /></div>
+          <div><label>Uitleendatum *</label><input id="loanOut" type="date" required /></div>
+          <div><label>Terugontvangen op</label><input id="loanIn" type="date" /></div>
+          <div style="grid-column: 1 / -1;"><label>Opmerking</label><input id="loanNote" placeholder="Optioneel, bijv. afspraak terugbrengdatum" /></div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:8px;">
+          <button class="btn" type="submit">Opslaan</button>
+          <button class="btn secondary" type="button" id="loanCancel" hidden>Annuleren</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Uitleenhistorie</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Gereedschap</th><th>Aan</th><th>Uitgeleend</th><th>Terug</th><th>Status</th><th>Opmerking</th><th class="actions">Acties</th></tr></thead>
+          <tbody id="loanRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const LS_TOOLS = 'gereedschap_tools_v1';
+const LS_LOANS = 'gereedschap_loans_v1';
+
+let tools = JSON.parse(localStorage.getItem(LS_TOOLS) || '[]');
+let loans = JSON.parse(localStorage.getItem(LS_LOANS) || '[]');
+let toolEditId = null, loanEditId = null;
+
+function save() {
+  localStorage.setItem(LS_TOOLS, JSON.stringify(tools));
+  localStorage.setItem(LS_LOANS, JSON.stringify(loans));
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('nl-NL') : '—';
+const uid = () => Date.now() + '' + Math.floor(Math.random() * 1000);
+
+function openLoans(toolId) {
+  return loans.filter(l => l.toolId === toolId && !l.dateIn);
+}
+
+// ---------- Herinneringen ----------
+const LS_REMIND = 'gereedschap_remind_days_v1';
+let remindDays = parseInt(localStorage.getItem(LS_REMIND)) || 14;
+
+function daysOut(l) {
+  const ms = Date.now() - new Date(l.dateOut + 'T00:00:00').getTime();
+  return Math.floor(ms / 86400000);
+}
+
+function isOverdue(l) {
+  return !l.dateIn && daysOut(l) >= remindDays;
+}
+
+function renderOverdue() {
+  const el = document.getElementById('overdueAlert');
+  const overdue = loans.filter(isOverdue).sort((a, b) => daysOut(b) - daysOut(a));
+  if (!overdue.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="alert">
+    <button class="btn small danger" onclick="dismissOverdue()">Sluiten</button>
+    <strong>⏰ Herinnering: ${overdue.length} uitleening(en) langer dan ${remindDays} dagen buiten</strong>
+    <ul>${overdue.map(l => {
+      const t = tools.find(x => x.id === l.toolId);
+      return `<li><strong>${esc(t ? t.name : '?(verwijderd)')}</strong> — ${esc(l.who)}, ${daysOut(l)} dagen buiten (uitgeleend ${fmt(l.dateOut)})</li>`;
+    }).join('')}</ul>
+  </div>`;
+}
+
+let overdueDismissedAt = null;
+function dismissOverdue() { overdueDismissedAt = Date.now(); renderOverdue(); }
+
+document.getElementById('remindDays').value = remindDays;
+document.getElementById('remindDays').addEventListener('input', e => {
+  remindDays = Math.max(1, parseInt(e.target.value) || 14);
+  localStorage.setItem(LS_REMIND, remindDays);
+  renderOverdue(); renderLoans(); renderTools();
+});
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-tools').hidden = btn.dataset.tab !== 'tools';
+    document.getElementById('tab-loans').hidden = btn.dataset.tab !== 'loans';
+  });
+});
+
+// ---------- Stats ----------
+function renderStats() {
+  const out = loans.filter(l => !l.dateIn).length;
+  const el = document.getElementById('stats');
+  el.innerHTML = `
+    <div class="stat"><div class="num">${tools.length}</div><div class="lbl">Gereedschappen</div></div>
+    <div class="stat"><div class="num">${out}</div><div class="lbl">Nu uitgeleend</div></div>
+    <div class="stat"><div class="num">${loans.filter(l => l.dateIn).length}</div><div class="lbl">Terugontvangen</div></div>`;
+}
+
+// ---------- Tools ----------
+function renderTools() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const rows = tools.filter(t =>
+    !q || [t.name, t.cat, t.brand, t.loc, t.note].some(v => (v || '').toLowerCase().includes(q))
+  );
+  const tb = document.getElementById('toolRows');
+  tb.innerHTML = rows.length ? rows.map(t => {
+    const open = openLoans(t.id);
+    const overdueOpen = open.filter(isOverdue);
+    const status = overdueOpen.length
+      ? `<span class="badge overdue">⚠ ${daysOut(overdueOpen[0])} dagen bij ${esc(overdueOpen.map(l => l.who).join(', '))}</span>`
+      : open.length
+      ? `<span class="badge uitleen">Uitgeleend aan ${esc(open.map(l => l.who).join(', '))}</span>`
+      : `<span class="badge terug">Beschikbaar</span>`;
+    return `<tr>
+      <td><strong>${esc(t.name)}</strong>${t.qty > 1 ? ` ×${t.qty}` : ''}${t.note ? `<br><small style="color:var(--muted)">${esc(t.note)}</small>` : ''}</td>
+      <td>${esc(t.cat || '—')}</td>
+      <td>${esc(t.brand || '—')}</td>
+      <td>${esc(t.loc || '—')}</td>
+      <td>${status}</td>
+      <td class="actions">
+        <button class="btn small" onclick="startLoan('${t.id}')">Uitlenen</button>
+        <button class="btn small secondary" onclick="editTool('${t.id}')">Wijzig</button>
+        <button class="btn small danger" onclick="delTool('${t.id}')">Verwijder</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty">Nog geen gereedschap toegevoegd.</td></tr>`;
+  renderStats();
+  renderLoanToolOptions();
+}
+
+document.getElementById('toolForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const data = {
+    name: toolName.value.trim(),
+    cat: toolCat.value.trim(),
+    brand: toolBrand.value.trim(),
+    loc: toolLoc.value.trim(),
+    qty: Math.max(1, parseInt(toolQty.value) || 1),
+    note: toolNote.value.trim(),
+  };
+  if (toolEditId) {
+    Object.assign(tools.find(t => t.id === toolEditId), data);
+  } else {
+    tools.push({ id: uid(), ...data });
+  }
+  save(); resetToolForm(); renderTools();
+});
+
+function resetToolForm() {
+  toolForm.reset(); toolQty.value = 1;
+  toolEditId = null;
+  toolFormTitle.textContent = 'Nieuw gereedschap toevoegen';
+  toolCancel.hidden = true;
+}
+document.getElementById('toolCancel').addEventListener('click', resetToolForm);
+
+function editTool(id) {
+  const t = tools.find(x => x.id === id); if (!t) return;
+  toolEditId = id;
+  toolId.value = t.id; toolName.value = t.name; toolCat.value = t.cat || '';
+  toolBrand.value = t.brand || ''; toolLoc.value = t.loc || '';
+  toolQty.value = t.qty || 1; toolNote.value = t.note || '';
+  toolFormTitle.textContent = 'Gereedschap wijzigen';
+  toolCancel.hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function delTool(id) {
+  if (!confirm('Dit gereedschap en de bijbehorende uitleeningen verwijderen?')) return;
+  tools = tools.filter(t => t.id !== id);
+  loans = loans.filter(l => l.toolId !== id);
+  save(); renderTools(); renderLoans();
+}
+
+document.getElementById('search').addEventListener('input', renderTools);
+
+// ---------- Loans ----------
+function renderLoanToolOptions() {
+  const sel = document.getElementById('loanTool');
+  const cur = sel.value;
+  sel.innerHTML = tools.map(t => `<option value="${t.id}">${esc(t.name)}${t.brand ? ' – ' + esc(t.brand) : ''}</option>`).join('') ||
+    '<option value="">— eerst gereedschap toevoegen —</option>';
+  if (cur && tools.some(t => t.id === cur)) sel.value = cur;
+}
+
+function renderLoans() {
+  const tb = document.getElementById('loanRows');
+  const sorted = [...loans].sort((a, b) => (b.dateOut || '').localeCompare(a.dateOut || ''));
+  tb.innerHTML = sorted.length ? sorted.map(l => {
+    const t = tools.find(x => x.id === l.toolId);
+    const status = l.dateIn
+      ? `<span class="badge terug">Terug op ${fmt(l.dateIn)}</span>`
+      : isOverdue(l)
+      ? `<span class="badge overdue">⚠ ${daysOut(l)} dagen buiten</span>`
+      : `<span class="badge uitleen">Buiten</span>`;
+    return `<tr>
+      <td><strong>${esc(t ? t.name : '?(verwijderd)')}</strong></td>
+      <td>${esc(l.who)}</td>
+      <td>${fmt(l.dateOut)}</td>
+      <td>${l.dateIn ? fmt(l.dateIn) : '—'}</td>
+      <td>${status}</td>
+      <td>${esc(l.note || '')}</td>
+      <td class="actions">
+        ${!l.dateIn ? `<button class="btn small" onclick="markReturned('${l.id}')">Terug</button>` : ''}
+        <button class="btn small secondary" onclick="editLoan('${l.id}')">Wijzig</button>
+        <button class="btn small danger" onclick="delLoan('${l.id}')">Verwijder</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="empty">Nog geen uitleeningen geregistreerd.</td></tr>`;
+  renderStats();
+}
+
+document.getElementById('loanForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const data = {
+    toolId: loanTool.value,
+    who: loanWho.value.trim(),
+    dateOut: loanOut.value,
+    dateIn: loanIn.value || null,
+    note: loanNote.value.trim(),
+  };
+  if (!data.toolId || !data.who || !data.dateOut) { alert('Vul gereedschap, persoon en uitleendatum in.'); return; }
+  if (loanEditId) {
+    Object.assign(loans.find(l => l.id === loanEditId), data);
+  } else {
+    loans.push({ id: uid(), ...data });
+  }
+  save(); resetLoanForm(); renderLoans(); renderTools(); renderOverdue();
+});
+
+function resetLoanForm() {
+  loanForm.reset();
+  loanEditId = null;
+  loanFormTitle.textContent = 'Nieuwe uitleening';
+  loanCancel.hidden = true;
+}
+document.getElementById('loanCancel').addEventListener('click', resetLoanForm);
+
+function startLoan(toolId) {
+  document.querySelector('[data-tab="loans"]').click();
+  resetLoanForm();
+  loanTool.value = toolId;
+  loanOut.value = new Date().toISOString().slice(0, 10);
+  loanWho.focus();
+}
+
+function editLoan(id) {
+  const l = loans.find(x => x.id === id); if (!l) return;
+  loanEditId = id;
+  loanTool.value = l.toolId; loanWho.value = l.who;
+  loanOut.value = l.dateOut || ''; loanIn.value = l.dateIn || '';
+  loanNote.value = l.note || '';
+  loanFormTitle.textContent = 'Uitleening wijzigen';
+  loanCancel.hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function markReturned(id) {
+  const l = loans.find(x => x.id === id); if (!l) return;
+  l.dateIn = new Date().toISOString().slice(0, 10);
+  save(); renderLoans(); renderTools(); renderOverdue();
+}
+
+function delLoan(id) {
+  if (!confirm('Deze uitleening verwijderen?')) return;
+  loans = loans.filter(l => l.id !== id);
+  save(); renderLoans(); renderTools(); renderOverdue();
+}
+
+// ---------- Export / Import ----------
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = {
+    app: 'gereedschapsregister',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tools,
+    loans,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gereedschapsregister_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data || !Array.isArray(data.tools) || !Array.isArray(data.loans)) {
+        throw new Error('Ongeldige structuur');
+      }
+      const mode = confirm(
+        'OK = samenvoegen met huidige data\n' +
+        'Annuleren = huidige data volledig vervangen'
+      );
+      if (mode) {
+        const toolIds = new Set(tools.map(t => t.id));
+        const loanIds = new Set(loans.map(l => l.id));
+        data.tools.forEach(t => { if (!toolIds.has(t.id)) tools.push(t); });
+        data.loans.forEach(l => { if (!loanIds.has(l.id)) loans.push(l); });
+      } else {
+        tools = data.tools;
+        loans = data.loans;
+      }
+      save();
+      resetToolForm(); resetLoanForm();
+      renderTools(); renderLoans(); renderOverdue();
+      alert('Importeren gelukt: ' + data.tools.length + ' gereedschappen en ' + data.loans.length + ' uitleeningen in het bestand.');
+    } catch (err) {
+      alert('Importeren mislukt: dit lijkt geen geldig exportbestand van de Gereedschapsregister.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+// ---------- Init ----------
+loanOut.value = new Date().toISOString().slice(0, 10);
+renderTools();
+renderLoans();
+renderOverdue();
+</script>
+</body>
+</html>
