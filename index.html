@@ -67,7 +67,7 @@
   .sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
   .sidebar-footer .btn { width: 100%; }
 
-  main { flex: 1; padding: 28px 32px; max-width: 1060px; }
+  main { flex: 1; padding: 28px 32px; max-width: 1060px; min-width: 0; }
 
   /* ---------- Kaarten ---------- */
   .card {
@@ -137,6 +137,15 @@
   .stat.highlight { background: var(--yellow); }
   .stat.highlight .lbl { color: rgba(22,33,27,.65); }
   .actions { white-space: nowrap; }
+  .card { overflow: hidden; }
+
+  /* Smalle schermen: minder belangrijke kolommen verbergen i.p.v. scrollbars */
+  @media (max-width: 1100px) {
+    #tab-tools .col-opt, #tab-loans .col-opt { display: none; }
+  }
+  @media (max-width: 860px) {
+    #tab-tools .col-md, #tab-loans .col-md { display: none; }
+  }
 
   @media (max-width: 820px) {
     .layout { flex-direction: column; }
@@ -196,7 +205,7 @@
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Naam</th><th>Categorie</th><th>Merk/type</th><th>Serienummer</th><th>Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
+          <thead><tr><th>Naam</th><th class="col-opt">Categorie</th><th class="col-md">Merk/type</th><th class="col-md">Serienummer</th><th class="col-md">Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
           <tbody id="toolRows"></tbody>
         </table>
       </div>
@@ -283,7 +292,7 @@
       <h2>Uitleenhistorie</h2>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Gereedschap</th><th>Aan</th><th>Uitgeleend</th><th>Verwacht terug</th><th>Terug</th><th>Status</th><th>Opmerking</th><th class="actions">Acties</th></tr></thead>
+          <thead><tr><th>Gereedschap</th><th>Aan</th><th class="col-md">Uitgeleend</th><th class="col-opt">Verwacht terug</th><th class="col-md">Terug</th><th>Status</th><th class="col-opt">Opmerking</th><th class="actions">Acties</th></tr></thead>
           <tbody id="loanRows"></tbody>
         </table>
       </div>
@@ -498,10 +507,10 @@ function renderTools() {
       : `<span class="badge terug">Beschikbaar</span>`;
     return `<tr>
       <td><strong>${esc(t.name)}</strong>${t.qty > 1 ? ` ×${t.qty}` : ''}${t.note ? `<br><small style="color:var(--muted)">${esc(t.note)}</small>` : ''}</td>
-      <td>${esc(t.cat || '—')}</td>
-      <td>${esc(t.brand || '—')}</td>
-      <td>${esc(t.serial || '—')}</td>
-      <td>${esc(t.loc || '—')}</td>
+      <td class="col-opt">${esc(t.cat || '—')}</td>
+      <td class="col-md">${esc(t.brand || '—')}</td>
+      <td class="col-md">${esc(t.serial || '—')}</td>
+      <td class="col-md">${esc(t.loc || '—')}</td>
       <td>${status}</td>
       <td class="actions">
         ${open.length
@@ -588,11 +597,11 @@ function renderLoans() {
     return `<tr>
       <td><strong>${esc(t ? t.name : '?(verwijderd)')}</strong></td>
       <td>${esc(l.who)}</td>
-      <td>${fmt(l.dateOut)}</td>
-      <td>${l.dateDue ? fmt(l.dateDue) : '—'}</td>
-      <td>${l.dateIn ? fmt(l.dateIn) : '—'}</td>
+      <td class="col-md">${fmt(l.dateOut)}</td>
+      <td class="col-opt">${l.dateDue ? fmt(l.dateDue) : '—'}</td>
+      <td class="col-md">${l.dateIn ? fmt(l.dateIn) : '—'}</td>
       <td>${status}</td>
-      <td>${esc(l.note || '')}</td>
+      <td class="col-opt">${esc(l.note || '')}</td>
       <td class="actions">
         ${!l.dateIn ? `<button class="btn small" onclick="markReturned('${l.id}')">Terug</button>` : ''}
         <button class="btn small secondary" onclick="editLoan('${l.id}')">Wijzig</button>
