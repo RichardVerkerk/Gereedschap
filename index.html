@@ -86,6 +86,7 @@
     border-radius: 10px; font-size: .95rem; font-family: inherit;
     background: #fff; color: var(--ink);
   }
+  select { margin-top: 6px; margin-bottom: 6px; }
   input:focus, select:focus { outline: 2px solid var(--green-700); outline-offset: 1px; border-color: transparent; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 
@@ -255,8 +256,29 @@
           <input type="number" id="remindDays" min="1" value="14" />
           <span>dagen uitgeleend</span>
         </div>
-        <input id="search" placeholder="Zoeken…" />
+        <input id="search" placeholder="Zoeken…" aria-label="Zoek gereedschap" />
       </div>
+      <div class="table-filters" aria-label="Gereedschap filteren en sorteren">
+        <select id="toolCatFilter" aria-label="Filter op categorie"><option value="">Alle categorieën</option></select>
+        <select id="toolLocFilter" aria-label="Filter op locatie"><option value="">Alle locaties</option></select>
+        <select id="toolStatusFilter" aria-label="Filter op status">
+          <option value="">Alle statussen</option>
+          <option value="available">Beschikbaar</option>
+          <option value="loaned">Uitgeleend</option>
+          <option value="overdue">Te laat / herinnering</option>
+        </select>
+        <select id="toolSort" aria-label="Sorteer gereedschap">
+          <option value="name-asc">Naam (A-Z)</option>
+          <option value="name-desc">Naam (Z-A)</option>
+          <option value="cat-asc">Categorie (A-Z)</option>
+          <option value="brand-asc">Merk/type (A-Z)</option>
+          <option value="loc-asc">Locatie (A-Z)</option>
+          <option value="qty-desc">Aantal (hoog-laag)</option>
+          <option value="qty-asc">Aantal (laag-hoog)</option>
+        </select>
+        <button class="btn small secondary" type="button" id="clearToolFilters">Wis filters</button>
+      </div>
+      <div class="filter-count" id="toolFilterCount" aria-live="polite"></div>
       <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Naam</th><th class="col-opt">Categorie</th><th class="col-md">Merk/type</th><th class="col-md">Serienummer</th><th class="col-md">Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
@@ -344,6 +366,27 @@
 
     <div class="card">
       <h2>Uitleenhistorie</h2>
+      <div class="table-filters" aria-label="Uitleeningen filteren en sorteren">
+        <input id="loanSearch" placeholder="Zoek gereedschap, persoon of opmerking…" aria-label="Zoek uitleeningen" />
+        <select id="loanPersonFilter" aria-label="Filter op persoon"><option value="">Alle personen</option></select>
+        <select id="loanStatusFilter" aria-label="Filter op status">
+          <option value="">Alle statussen</option>
+          <option value="open">Lopend / uitgeleend</option>
+          <option value="overdue">Te laat / herinnering</option>
+          <option value="returned">Teruggebracht</option>
+        </select>
+        <select id="loanSort" aria-label="Sorteer uitleeningen">
+          <option value="dateOut-desc">Uitleendatum (nieuwste eerst)</option>
+          <option value="dateOut-asc">Uitleendatum (oudste eerst)</option>
+          <option value="tool-asc">Gereedschap (A-Z)</option>
+          <option value="who-asc">Persoon (A-Z)</option>
+          <option value="dateDue-asc">Verwachte retour (eerstvolgende)</option>
+          <option value="dateDue-desc">Verwachte retour (laatste eerst)</option>
+          <option value="status-asc">Status</option>
+        </select>
+        <button class="btn small secondary" type="button" id="clearLoanFilters">Wis filters</button>
+      </div>
+      <div class="filter-count" id="loanFilterCount" aria-live="polite"></div>
       <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Gereedschap</th><th>Aan</th><th class="col-md">Uitgeleend</th><th class="col-opt">Verwacht terug</th><th class="col-md">Terug</th><th>Status</th><th class="col-opt">Opmerking</th><th class="actions">Acties</th></tr></thead>
@@ -555,10 +598,52 @@ function renderStats() {
 
 // ---------- Tools ----------
 function renderTools() {
-  const q = document.getElementById('search').value.toLowerCase();
-  const rows = tools.filter(t =>
-    !q || [t.name, t.cat, t.brand, t.serial, t.loc, t.note].some(v => (v || '').toLowerCase().includes(q))
+  const q = document.getElementById('search').value.trim().toLocaleLowerCase('nl');
+  const catFilter = document.getElementById('toolCatFilter').value;
+  const locFilter = document.getElementById('toolLocFilter').value;
+  const statusFilter = document.getElementById('toolStatusFilter').value;
+  const sort = document.getElementById('toolSort').value;
+
+  // Houd filterkeuzes actueel wanneer categorieën of locaties veranderen.
+  const catSelect = document.getElementById('toolCatFilter');
+  const locSelect = document.getElementById('toolLocFilter');
+  const currentCat = catSelect.value;
+  const currentLoc = locSelect.value;
+  catSelect.innerHTML = '<option value="">Alle categorieën</option>' +
+    [...new Set(tools.map(t => t.cat).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'nl'))
+      .map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  locSelect.innerHTML = '<option value="">Alle locaties</option>' +
+    [...new Set(tools.map(t => t.loc).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'nl'))
+      .map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  if ([...catSelect.options].some(o => o.value === currentCat)) catSelect.value = currentCat;
+  if ([...locSelect.options].some(o => o.value === currentLoc)) locSelect.value = currentLoc;
+
+  const matchesSearch = t => !q || [t.name, t.cat, t.brand, t.serial, t.loc, t.note]
+    .some(v => String(v || '').toLocaleLowerCase('nl').includes(q));
+  const getToolStatus = t => {
+    const open = openLoans(t.id);
+    if (!open.length) return 'available';
+    return open.some(isOverdue) ? 'overdue' : 'loaned';
+  };
+  const compareText = (a, b) => String(a || '').localeCompare(String(b || ''), 'nl', { sensitivity: 'base' });
+  let rows = tools.filter(t =>
+    matchesSearch(t) &&
+    (!catFilter || t.cat === catFilter) &&
+    (!locFilter || t.loc === locFilter) &&
+    (!statusFilter || getToolStatus(t) === statusFilter)
   );
+
+  const sorters = {
+    'name-asc': (a,b) => compareText(a.name,b.name),
+    'name-desc': (a,b) => compareText(b.name,a.name),
+    'cat-asc': (a,b) => compareText(a.cat,b.cat) || compareText(a.name,b.name),
+    'brand-asc': (a,b) => compareText(a.brand,b.brand) || compareText(a.name,b.name),
+    'loc-asc': (a,b) => compareText(a.loc,b.loc) || compareText(a.name,b.name),
+    'qty-desc': (a,b) => (Number(b.qty)||1) - (Number(a.qty)||1),
+    'qty-asc': (a,b) => (Number(a.qty)||1) - (Number(b.qty)||1)
+  };
+  rows.sort(sorters[sort] || sorters['name-asc']);
+
   const tb = document.getElementById('toolRows');
   tb.innerHTML = rows.length ? rows.map(t => {
     const open = openLoans(t.id);
@@ -595,7 +680,9 @@ function renderTools() {
         </div>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="7" class="empty">Nog geen gereedschap toegevoegd.</td></tr>`;
+  }).join('') : `<tr><td colspan="7" class="empty">Geen gereedschap gevonden met deze zoek- en filterinstellingen.</td></tr>`;
+  document.getElementById('toolFilterCount').textContent =
+    `${rows.length} van ${tools.length} gereedschappen weergegeven`;
   renderStats();
   renderLoanToolOptions();
 }
@@ -649,6 +736,17 @@ function delTool(id) {
 }
 
 document.getElementById('search').addEventListener('input', renderTools);
+['toolCatFilter', 'toolLocFilter', 'toolStatusFilter', 'toolSort'].forEach(id =>
+  document.getElementById(id).addEventListener('change', renderTools)
+);
+document.getElementById('clearToolFilters').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  document.getElementById('toolCatFilter').value = '';
+  document.getElementById('toolLocFilter').value = '';
+  document.getElementById('toolStatusFilter').value = '';
+  document.getElementById('toolSort').value = 'name-asc';
+  renderTools();
+});
 
 // ---------- Loans ----------
 function renderLoanToolOptions() {
@@ -661,9 +759,46 @@ function renderLoanToolOptions() {
 
 function renderLoans() {
   const tb = document.getElementById('loanRows');
-  const sorted = [...loans].sort((a, b) => (b.dateOut || '').localeCompare(a.dateOut || ''));
+  const q = document.getElementById('loanSearch').value.trim().toLocaleLowerCase('nl');
+  const personFilter = document.getElementById('loanPersonFilter').value;
+  const statusFilter = document.getElementById('loanStatusFilter').value;
+  const sort = document.getElementById('loanSort').value;
+
+  const personSelect = document.getElementById('loanPersonFilter');
+  const currentPerson = personSelect.value;
+  const peopleInLoans = [...new Set(loans.map(l => l.who).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b, 'nl'));
+  personSelect.innerHTML = '<option value="">Alle personen</option>' +
+    peopleInLoans.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  if (peopleInLoans.includes(currentPerson)) personSelect.value = currentPerson;
+
+  const getTool = l => tools.find(x => x.id === l.toolId);
+  const getLoanStatus = l => !l.dateIn ? (isOverdue(l) ? 'overdue' : 'open') : 'returned';
+  const compareText = (a, b) => String(a || '').localeCompare(String(b || ''), 'nl', { sensitivity: 'base' });
+  const matchesSearch = l => {
+    const t = getTool(l);
+    return !q || [t?.name, t?.brand, l.who, l.note, l.dateOut, l.dateDue, l.dateIn]
+      .some(v => String(v || '').toLocaleLowerCase('nl').includes(q));
+  };
+  let sorted = loans.filter(l =>
+    matchesSearch(l) &&
+    (!personFilter || l.who === personFilter) &&
+    (!statusFilter || getLoanStatus(l) === statusFilter)
+  );
+
+  const sorters = {
+    'dateOut-desc': (a,b) => (b.dateOut || '').localeCompare(a.dateOut || ''),
+    'dateOut-asc': (a,b) => (a.dateOut || '').localeCompare(b.dateOut || ''),
+    'tool-asc': (a,b) => compareText(getTool(a)?.name, getTool(b)?.name),
+    'who-asc': (a,b) => compareText(a.who,b.who),
+    'dateDue-asc': (a,b) => (a.dateDue || '9999-12-31').localeCompare(b.dateDue || '9999-12-31'),
+    'dateDue-desc': (a,b) => (b.dateDue || '').localeCompare(a.dateDue || ''),
+    'status-asc': (a,b) => compareText(getLoanStatus(a), getLoanStatus(b))
+  };
+  sorted.sort(sorters[sort] || sorters['dateOut-desc']);
+
   tb.innerHTML = sorted.length ? sorted.map(l => {
-    const t = tools.find(x => x.id === l.toolId);
+    const t = getTool(l);
     const status = l.dateIn
       ? `<span class="badge terug">Terug op ${fmt(l.dateIn)}</span>`
       : isOverdue(l)
@@ -683,9 +818,25 @@ function renderLoans() {
         <button class="btn small danger" onclick="delLoan('${l.id}')">Verwijder</button>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="8" class="empty">Nog geen uitleeningen geregistreerd.</td></tr>`;
+  }).join('') : `<tr><td colspan="8" class="empty">Geen uitleeningen gevonden met deze zoek- en filterinstellingen.</td></tr>`;
+  document.getElementById('loanFilterCount').textContent =
+    `${sorted.length} van ${loans.length} uitleeningen weergegeven`;
   renderStats();
 }
+
+['loanSearch'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderLoans)
+);
+['loanPersonFilter', 'loanStatusFilter', 'loanSort'].forEach(id =>
+  document.getElementById(id).addEventListener('change', renderLoans)
+);
+document.getElementById('clearLoanFilters').addEventListener('click', () => {
+  document.getElementById('loanSearch').value = '';
+  document.getElementById('loanPersonFilter').value = '';
+  document.getElementById('loanStatusFilter').value = '';
+  document.getElementById('loanSort').value = 'dateOut-desc';
+  renderLoans();
+});
 
 document.getElementById('loanForm').addEventListener('submit', e => {
   e.preventDefault();
