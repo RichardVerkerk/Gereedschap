@@ -168,6 +168,9 @@
     <nav class="tabs">
       <button class="active" data-tab="tools">🧰 Gereedschap</button>
       <button data-tab="loans">🔄 Uitleeningen</button>
+      <button data-tab="add">➕ Toevoegen</button>
+      <button data-tab="cats">🏷️ Categorieën</button>
+      <button data-tab="persons">👥 Personen</button>
     </nav>
     <div class="sidebar-footer">
       <button class="btn yellow" id="exportBtn" title="Alles opslaan als JSON-bestand">⬇ Exporteren</button>
@@ -179,50 +182,8 @@
     <div id="overdueAlert"></div>
     <div class="stats" id="stats"></div>
 
-  <div class="tabs">
-    <button class="active" data-tab="tools">Gereedschap</button>
-    <button data-tab="loans">Uitleeningen</button>
-  </div>
-
   <!-- GEREEDSCHAP -->
   <section id="tab-tools">
-    <div class="card">
-      <h2 id="toolFormTitle" class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span><span id="toolFormTitleText">Nieuw gereedschap toevoegen</span></h2>
-      <div class="card-body" hidden>
-      <form id="toolForm">
-        <input type="hidden" id="toolId" />
-        <div class="grid">
-          <div><label>Naam *</label><input id="toolName" required placeholder="Bijv. Boormachine Bosch" /></div>
-          <div><label>Categorie</label>
-            <div style="display:flex; gap:6px;">
-              <select id="toolCat"></select>
-              <button class="btn small secondary" type="button" onclick="document.getElementById('catsCard').scrollIntoView({behavior:'smooth'})">Beheer</button>
-            </div>
-          </div>
-          <div><label>Merk / type</label><input id="toolBrand" placeholder="Bijv. GSB 18V" /></div>
-          <div><label>Locatie</label><input id="toolLoc" placeholder="Bijv. Schuur, kast 2" /></div>
-          <div><label>Aantal</label><input id="toolQty" type="number" min="1" value="1" /></div>
-          <div><label>Serienummer</label><input id="toolSerial" placeholder="Bijv. SN-4471-B" /></div>
-          <div><label>Opmerking</label><input id="toolNote" placeholder="Optioneel" /></div>
-        </div>
-        <div style="margin-top:14px; display:flex; gap:8px;">
-          <button class="btn" type="submit">Opslaan</button>
-          <button class="btn secondary" type="button" id="toolCancel" hidden>Annuleren</button>
-        </div>
-      </form>
-      </div>
-    </div>
-
-    <div class="card" id="catsCard">
-      <h2 class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span>Categorieën beheren</h2>
-      <div class="card-body" hidden>      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
-        <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
-        <button class="btn" type="submit">Toevoegen</button>
-      </form>
-      <div id="catList"></div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="toolbar">
         <h2 style="margin:0">Mijn gereedschap</h2>
@@ -239,6 +200,58 @@
           <tbody id="toolRows"></tbody>
         </table>
       </div>
+    </div>
+  </section>
+
+  <!-- TOEVOEGEN -->
+  <section id="tab-add" hidden>
+    <div class="card">
+      <h2 id="toolFormTitle"><span id="toolFormTitleText">Nieuw gereedschap toevoegen</span></h2>
+      <form id="toolForm">
+        <input type="hidden" id="toolId" />
+        <div class="grid">
+          <div><label>Naam *</label><input id="toolName" required placeholder="Bijv. Boormachine Bosch" /></div>
+          <div><label>Categorie</label>
+            <div style="display:flex; gap:6px;">
+              <select id="toolCat"></select>
+              <button class="btn small secondary" type="button" onclick="document.querySelector('[data-tab=\'cats\']').click()">Beheer</button>
+            </div>
+          </div>
+          <div><label>Merk / type</label><input id="toolBrand" placeholder="Bijv. GSB 18V" /></div>
+          <div><label>Locatie</label><input id="toolLoc" placeholder="Bijv. Schuur, kast 2" /></div>
+          <div><label>Aantal</label><input id="toolQty" type="number" min="1" value="1" /></div>
+          <div><label>Serienummer</label><input id="toolSerial" placeholder="Bijv. SN-4471-B" /></div>
+          <div><label>Opmerking</label><input id="toolNote" placeholder="Optioneel" /></div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:8px;">
+          <button class="btn" type="submit">Opslaan</button>
+          <button class="btn secondary" type="button" id="toolCancel" hidden>Annuleren</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- CATEGORIEËN -->
+  <section id="tab-cats" hidden>
+    <div class="card" id="catsCard">
+      <h2>Categorieën beheren</h2>
+      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+      <div id="catList"></div>
+    </div>
+  </section>
+
+  <!-- PERSONEN -->
+  <section id="tab-persons" hidden>
+    <div class="card" id="personsCard">
+      <h2>Personen beheren</h2>
+      <form id="personForm" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input id="newPerson" placeholder="Nieuwe persoon, bijv. Jan de Vries" style="max-width:280px;" />
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+      <div id="personListDiv"></div>
     </div>
   </section>
 
@@ -264,17 +277,6 @@
           <button class="btn secondary" type="button" id="loanCancel" hidden>Annuleren</button>
         </div>
       </form>
-    </div>
-
-    <div class="card" id="personsCard">
-      <h2 class="toggle" onclick="toggleCard(this)"><span class="chev">▶</span>Personen beheren</h2>
-      <div class="card-body" hidden>
-      <form id="personForm" style="display:flex; gap:8px; margin-bottom:12px;">
-        <input id="newPerson" placeholder="Nieuwe persoon, bijv. Jan de Vries" style="max-width:280px;" />
-        <button class="btn" type="submit">Toevoegen</button>
-      </form>
-      <div id="personListDiv"></div>
-      </div>
     </div>
 
     <div class="card">
@@ -464,8 +466,9 @@ document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-tools').hidden = btn.dataset.tab !== 'tools';
-    document.getElementById('tab-loans').hidden = btn.dataset.tab !== 'loans';
+    document.querySelectorAll('main > section[id^="tab-"]').forEach(s => {
+      s.hidden = s.id !== 'tab-' + btn.dataset.tab;
+    });
   });
 });
 
@@ -530,6 +533,7 @@ document.getElementById('toolForm').addEventListener('submit', e => {
     tools.push({ id: uid(), ...data });
   }
   save(); resetToolForm(); renderTools();
+  document.querySelector('[data-tab="tools"]').click();
 });
 
 function resetToolForm() {
@@ -549,9 +553,8 @@ function editTool(id) {
   toolQty.value = t.qty || 1; toolNote.value = t.note || '';
   toolFormTitleText.textContent = 'Gereedschap wijzigen';
   toolCancel.hidden = false;
-  const h = document.getElementById('toolFormTitle');
-  if (!h.classList.contains('open')) toggleCard(h);
-  h.scrollIntoView({ behavior: 'smooth' });
+  document.querySelector('[data-tab="add"]').click();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function delTool(id) {
