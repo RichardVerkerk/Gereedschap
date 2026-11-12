@@ -159,14 +159,36 @@
   .detail-grid .k { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
   .detail-grid .v { font-size: .88rem; }
 
+  /* ---------- Hamburger-menu (kleine schermen) ---------- */
+  .hamburger {
+    display: none;
+    position: fixed; top: 12px; left: 12px; z-index: 60;
+    width: 44px; height: 44px; border: none; border-radius: 12px;
+    background: var(--green-800); color: #fff; font-size: 1.3rem;
+    cursor: pointer; box-shadow: var(--shadow); align-items: center; justify-content: center;
+  }
+  .backdrop {
+    display: none;
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(14, 43, 32, .45);
+  }
+  .backdrop.show { display: block; }
+
   @media (max-width: 820px) {
     .layout { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
-    .tabs { flex-direction: row; }
-    .tabs button { width: auto; padding: 8px 14px; }
-    .sidebar-footer { margin-top: 0; flex-direction: row; width: auto; }
-    .sidebar-footer .btn { width: auto; }
-    main { padding: 18px 14px; }
+    .hamburger { display: flex; }
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; height: 100vh;
+      z-index: 50; transform: translateX(-105%);
+      transition: transform .2s ease;
+      box-shadow: none;
+    }
+    .sidebar.open { transform: none; box-shadow: 0 0 40px rgba(0,0,0,.35); }
+    .tabs { flex-direction: column; }
+    .tabs button { width: 100%; padding: 11px 16px; }
+    .sidebar-footer { margin-top: auto; flex-direction: column; width: 100%; }
+    .sidebar-footer .btn { width: 100%; }
+    main { padding: 70px 14px 18px; max-width: 100%; }
   }
   @media (max-width: 640px) {
     table, thead, tbody, tr, td, th { display: block; }
@@ -177,6 +199,8 @@
 </style>
 </head>
 <body>
+<button class="hamburger" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Menu">☰</button>
+<div class="backdrop" id="backdrop" onclick="toggleMenu(false)"></div>
 <div class="layout">
   <aside class="sidebar">
     <div class="brand">
@@ -482,6 +506,13 @@ function toggleCard(h) {
   h.parentElement.querySelector('.card-body').hidden = !h.classList.contains('open');
 }
 
+// ---------- Menu ----------
+function toggleMenu(force) {
+  const open = force !== undefined ? force : !document.querySelector('.sidebar').classList.contains('open');
+  document.querySelector('.sidebar').classList.toggle('open', open);
+  document.getElementById('backdrop').classList.toggle('show', open);
+}
+
 // ---------- Tabs ----------
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -490,6 +521,7 @@ document.querySelectorAll('.tabs button').forEach(btn => {
     document.querySelectorAll('main > section[id^="tab-"]').forEach(s => {
       s.hidden = s.id !== 'tab-' + btn.dataset.tab;
     });
+    toggleMenu(false);
   });
 });
 
