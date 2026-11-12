@@ -147,8 +147,7 @@
     </div>
 
     <div class="card" id="catsCard">
-      <h2>Categorieën beheren</h2>
-      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
+      <h2>Categorieën beheren</h2>      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
         <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
         <button class="btn" type="submit">Toevoegen</button>
       </form>
@@ -182,7 +181,10 @@
         <input type="hidden" id="loanId" />
         <div class="grid">
           <div><label>Gereedschap *</label><select id="loanTool" required></select></div>
-          <div><label>Uitgeleend aan *</label><input id="loanWho" required placeholder="Naam persoon" /></div>
+          <div><label>Uitgeleend aan *</label>
+            <input id="loanWho" required placeholder="Naam persoon" list="personList" autocomplete="off" />
+            <datalist id="personList"></datalist>
+          </div>
           <div><label>Uitleendatum *</label><input id="loanOut" type="date" required /></div>
           <div><label>Verwacht terug op</label><input id="loanDue" type="date" /></div>
           <div><label>Terugontvangen op</label><input id="loanIn" type="date" /></div>
@@ -193,6 +195,15 @@
           <button class="btn secondary" type="button" id="loanCancel" hidden>Annuleren</button>
         </div>
       </form>
+    </div>
+
+    <div class="card" id="personsCard">
+      <h2>Personen beheren</h2>
+      <form id="personForm" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input id="newPerson" placeholder="Nieuwe persoon, bijv. Jan de Vries" style="max-width:280px;" />
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+      <div id="personListDiv"></div>
     </div>
 
     <div class="card">
@@ -279,6 +290,53 @@ function delCat(name) {
   if (!confirm('Categorie "' + name + '" verwijderen?' + (n ? ` ${n} gereedschapsitem(s) behouden hun categorie-waarde.` : ''))) return;
   cats = cats.filter(c => c !== name);
   saveCats(); renderCats();
+}
+
+// ---------- Personen ----------
+const LS_PEOPLE = 'gereedschap_people_v1';
+let people = JSON.parse(localStorage.getItem(LS_PEOPLE) || '[]');
+
+function savePeople() { localStorage.setItem(LS_PEOPLE, JSON.stringify(people)); }
+
+function renderPeople() {
+  const el = document.getElementById('personListDiv');
+  document.getElementById('personList').innerHTML = people.map(p => `<option value="${esc(p)}"></option>`).join('');
+  el.innerHTML = people.length ? people.map(p => {
+    const n = loans.filter(l => l.who === p).length;
+    const open = loans.filter(l => l.who === p && !l.dateIn).length;
+    return `<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span style="flex:1">${esc(p)} <small style="color:var(--muted)">(${n} uitleening(en)${open ? `, ${open} nu buiten` : ''})</small></span>
+      <button class="btn small secondary" onclick="renamePerson('${esc(p).replace(/'/g, "\\'")}')">Hernoem</button>
+      <button class="btn small danger" onclick="delPerson('${esc(p).replace(/'/g, "\\'")}')">Verwijder</button>
+    </div>`;
+  }).join('') : '<div class="empty">Nog geen personen. Voeg ze hierboven toe, of ze verschijnen automatisch zodra je iemand iets uitleent.</div>';
+}
+
+document.getElementById('personForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = newPerson.value.trim();
+  if (!name) return;
+  if (people.some(p => p.toLowerCase() === name.toLowerCase())) { alert('Deze persoon bestaat al.'); return; }
+  people.push(name);
+  people.sort((a, b) => a.localeCompare(b, 'nl'));
+  savePeople(); newPerson.value = ''; renderPeople();
+});
+
+function renamePerson(oldName) {
+  const name = prompt('Nieuwe naam voor "' + oldName + '":', oldName);
+  if (!name || name.trim() === oldName) return;
+  const trimmed = name.trim();
+  if (people.some(p => p.toLowerCase() === trimmed.toLowerCase())) { alert('Deze persoon bestaat al.'); return; }
+  people = people.map(p => p === oldName ? trimmed : p);
+  loans.forEach(l => { if (l.who === oldName) l.who = trimmed; });
+  savePeople(); save(); renderPeople(); renderLoans();
+}
+
+function delPerson(name) {
+  const open = loans.filter(l => l.who === name && !l.dateIn).length;
+  if (!confirm('Persoon "' + name + '" uit de lijst verwijderen?' + (open ? ` Let op: ${open} uitleening(en) zijn nog open.` : ''))) return;
+  people = people.filter(p => p !== name);
+  savePeople(); renderPeople();
 }
 
 // ---------- Herinneringen ----------
@@ -477,7 +535,12 @@ document.getElementById('loanForm').addEventListener('submit', e => {
   } else {
     loans.push({ id: uid(), ...data });
   }
-  save(); resetLoanForm(); renderLoans(); renderTools(); renderOverdue();
+  if (!people.some(p => p.toLowerCase() === data.who.toLowerCase())) {
+    people.push(data.who);
+    people.sort((a, b) => a.localeCompare(b, 'nl'));
+    savePeople();
+  }
+  save(); resetLoanForm(); renderLoans(); renderTools(); renderOverdue(); renderPeople();
 });
 
 function resetLoanForm() {
@@ -578,6 +641,7 @@ loanOut.value = new Date().toISOString().slice(0, 10);
 renderTools();
 renderLoans();
 renderCats();
+renderPeople();
 renderOverdue();
 </script>
 </body>
