@@ -440,7 +440,9 @@ function renderTools() {
       <td>${esc(t.loc || '—')}</td>
       <td>${status}</td>
       <td class="actions">
-        <button class="btn small" onclick="startLoan('${t.id}')">Uitlenen</button>
+        ${open.length
+          ? `<button class="btn small" onclick="returnTool('${t.id}')" title="Markeer als terugontvangen">⬅ Terug</button>`
+          : `<button class="btn small" onclick="startLoan('${t.id}')">Uitlenen</button>`}
         <button class="btn small secondary" onclick="editTool('${t.id}')">Wijzig</button>
         <button class="btn small danger" onclick="delTool('${t.id}')">Verwijder</button>
       </td>
@@ -575,6 +577,14 @@ function startLoan(toolId) {
   loanTool.value = toolId;
   loanOut.value = new Date().toISOString().slice(0, 10);
   loanWho.focus();
+}
+
+function returnTool(toolId) {
+  const open = openLoans(toolId);
+  if (!open.length) return;
+  const today = new Date().toISOString().slice(0, 10);
+  open.forEach(l => { l.dateIn = today; });
+  save(); renderTools(); renderLoans(); renderOverdue();
 }
 
 function editLoan(id) {
