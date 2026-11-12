@@ -127,7 +127,12 @@
         <input type="hidden" id="toolId" />
         <div class="grid">
           <div><label>Naam *</label><input id="toolName" required placeholder="Bijv. Boormachine Bosch" /></div>
-          <div><label>Categorie</label><input id="toolCat" placeholder="Bijv. Elektrisch" /></div>
+          <div><label>Categorie</label>
+            <div style="display:flex; gap:6px;">
+              <select id="toolCat"></select>
+              <button class="btn small secondary" type="button" onclick="document.getElementById('catsCard').scrollIntoView({behavior:'smooth'})">Beheer</button>
+            </div>
+          </div>
           <div><label>Merk / type</label><input id="toolBrand" placeholder="Bijv. GSB 18V" /></div>
           <div><label>Locatie</label><input id="toolLoc" placeholder="Bijv. Schuur, kast 2" /></div>
           <div><label>Aantal</label><input id="toolQty" type="number" min="1" value="1" /></div>
@@ -139,6 +144,15 @@
           <button class="btn secondary" type="button" id="toolCancel" hidden>Annuleren</button>
         </div>
       </form>
+    </div>
+
+    <div class="card" id="catsCard">
+      <h2>Categorieën beheren</h2>
+      <form id="catForm" style="display:flex; gap:8px; margin-bottom:12px;">
+        <input id="newCat" placeholder="Nieuwe categorie, bijv. Ladders" style="max-width:280px;" />
+        <button class="btn" type="submit">Toevoegen</button>
+      </form>
+      <div id="catList"></div>
     </div>
 
     <div class="card">
@@ -170,6 +184,7 @@
           <div><label>Gereedschap *</label><select id="loanTool" required></select></div>
           <div><label>Uitgeleend aan *</label><input id="loanWho" required placeholder="Naam persoon" /></div>
           <div><label>Uitleendatum *</label><input id="loanOut" type="date" required /></div>
+          <div><label>Verwacht terug op</label><input id="loanDue" type="date" /></div>
           <div><label>Terugontvangen op</label><input id="loanIn" type="date" /></div>
           <div style="grid-column: 1 / -1;"><label>Opmerking</label><input id="loanNote" placeholder="Optioneel, bijv. afspraak terugbrengdatum" /></div>
         </div>
@@ -184,7 +199,7 @@
       <h2>Uitleenhistorie</h2>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Gereedschap</th><th>Aan</th><th>Uitgeleend</th><th>Terug</th><th>Status</th><th>Opmerking</th><th class="actions">Acties</th></tr></thead>
+          <thead><tr><th>Gereedschap</th><th>Aan</th><th>Uitgeleend</th><th>Verwacht terug</th><th>Terug</th><th>Status</th><th>Opmerking</th><th class="actions">Acties</th></tr></thead>
           <tbody id="loanRows"></tbody>
         </table>
       </div>
@@ -212,6 +227,60 @@ function openLoans(toolId) {
   return loans.filter(l => l.toolId === toolId && !l.dateIn);
 }
 
+// ---------- Categorieën ----------
+const LS_CATS = 'gereedschap_cats_v1';
+let cats = JSON.parse(localStorage.getItem(LS_CATS) || 'null') ||
+  ['Elektrisch', 'Handgereedschap', 'Tuin', 'Meetgereedschap', 'Overig'];
+
+function saveCats() { localStorage.setItem(LS_CATS, JSON.stringify(cats)); }
+
+function renderCatOptions() {
+  const cur = toolCat.value;
+  toolCat.innerHTML = '<option value="">— geen —</option>' +
+    cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (cur && cats.includes(cur)) toolCat.value = cur;
+}
+
+function renderCats() {
+  const el = document.getElementById('catList');
+  el.innerHTML = cats.length ? cats.map(c => {
+    const n = tools.filter(t => t.cat === c).length;
+    return `<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span style="flex:1">${esc(c)} <small style="color:var(--muted)">(${n} item${n === 1 ? '' : 's'})</small></span>
+      <button class="btn small secondary" onclick="renameCat('${esc(c).replace(/'/g, "\\'")}')">Hernoem</button>
+      <button class="btn small danger" onclick="delCat('${esc(c).replace(/'/g, "\\'")}')">Verwijder</button>
+    </div>`;
+  }).join('') : '<div class="empty">Geen categorieën meer. Voeg er een toe hierboven.</div>';
+  renderCatOptions();
+}
+
+document.getElementById('catForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = newCat.value.trim();
+  if (!name) return;
+  if (cats.some(c => c.toLowerCase() === name.toLowerCase())) { alert('Deze categorie bestaat al.'); return; }
+  cats.push(name);
+  cats.sort((a, b) => a.localeCompare(b, 'nl'));
+  saveCats(); newCat.value = ''; renderCats();
+});
+
+function renameCat(oldName) {
+  const name = prompt('Nieuwe naam voor "' + oldName + '":', oldName);
+  if (!name || name.trim() === oldName) return;
+  const trimmed = name.trim();
+  if (cats.some(c => c.toLowerCase() === trimmed.toLowerCase())) { alert('Deze categorie bestaat al.'); return; }
+  cats = cats.map(c => c === oldName ? trimmed : c);
+  tools.forEach(t => { if (t.cat === oldName) t.cat = trimmed; });
+  saveCats(); save(); renderCats(); renderTools();
+}
+
+function delCat(name) {
+  const n = tools.filter(t => t.cat === name).length;
+  if (!confirm('Categorie "' + name + '" verwijderen?' + (n ? ` ${n} gereedschapsitem(s) behouden hun categorie-waarde.` : ''))) return;
+  cats = cats.filter(c => c !== name);
+  saveCats(); renderCats();
+}
+
 // ---------- Herinneringen ----------
 const LS_REMIND = 'gereedschap_remind_days_v1';
 let remindDays = parseInt(localStorage.getItem(LS_REMIND)) || 14;
@@ -222,7 +291,9 @@ function daysOut(l) {
 }
 
 function isOverdue(l) {
-  return !l.dateIn && daysOut(l) >= remindDays;
+  if (l.dateIn) return false;
+  if (l.dateDue && l.dateDue < new Date().toISOString().slice(0, 10)) return true;
+  return daysOut(l) >= remindDays;
 }
 
 function renderOverdue() {
@@ -234,7 +305,10 @@ function renderOverdue() {
     <strong>⏰ Herinnering: ${overdue.length} uitleening(en) langer dan ${remindDays} dagen buiten</strong>
     <ul>${overdue.map(l => {
       const t = tools.find(x => x.id === l.toolId);
-      return `<li><strong>${esc(t ? t.name : '?(verwijderd)')}</strong> — ${esc(l.who)}, ${daysOut(l)} dagen buiten (uitgeleend ${fmt(l.dateOut)})</li>`;
+      const reden = l.dateDue && l.dateDue < new Date().toISOString().slice(0, 10)
+        ? `verwacht op ${fmt(l.dateDue)} (verstreken)`
+        : `${daysOut(l)} dagen buiten`;
+      return `<li><strong>${esc(t ? t.name : '?(verwijderd)')}</strong> — ${esc(l.who)}, ${reden}</li>`;
     }).join('')}</ul>
   </div>`;
 }
@@ -373,6 +447,7 @@ function renderLoans() {
       <td><strong>${esc(t ? t.name : '?(verwijderd)')}</strong></td>
       <td>${esc(l.who)}</td>
       <td>${fmt(l.dateOut)}</td>
+      <td>${l.dateDue ? fmt(l.dateDue) : '—'}</td>
       <td>${l.dateIn ? fmt(l.dateIn) : '—'}</td>
       <td>${status}</td>
       <td>${esc(l.note || '')}</td>
@@ -382,7 +457,7 @@ function renderLoans() {
         <button class="btn small danger" onclick="delLoan('${l.id}')">Verwijder</button>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="7" class="empty">Nog geen uitleeningen geregistreerd.</td></tr>`;
+  }).join('') : `<tr><td colspan="8" class="empty">Nog geen uitleeningen geregistreerd.</td></tr>`;
   renderStats();
 }
 
@@ -392,6 +467,7 @@ document.getElementById('loanForm').addEventListener('submit', e => {
     toolId: loanTool.value,
     who: loanWho.value.trim(),
     dateOut: loanOut.value,
+    dateDue: loanDue.value || null,
     dateIn: loanIn.value || null,
     note: loanNote.value.trim(),
   };
@@ -424,7 +500,7 @@ function editLoan(id) {
   const l = loans.find(x => x.id === id); if (!l) return;
   loanEditId = id;
   loanTool.value = l.toolId; loanWho.value = l.who;
-  loanOut.value = l.dateOut || ''; loanIn.value = l.dateIn || '';
+  loanOut.value = l.dateOut || ''; loanDue.value = l.dateDue || ''; loanIn.value = l.dateIn || '';
   loanNote.value = l.note || '';
   loanFormTitle.textContent = 'Uitleening wijzigen';
   loanCancel.hidden = false;
@@ -501,6 +577,7 @@ document.getElementById('importFile').addEventListener('change', e => {
 loanOut.value = new Date().toISOString().slice(0, 10);
 renderTools();
 renderLoans();
+renderCats();
 renderOverdue();
 </script>
 </body>
