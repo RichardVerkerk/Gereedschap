@@ -131,6 +131,7 @@
           <div><label>Merk / type</label><input id="toolBrand" placeholder="Bijv. GSB 18V" /></div>
           <div><label>Locatie</label><input id="toolLoc" placeholder="Bijv. Schuur, kast 2" /></div>
           <div><label>Aantal</label><input id="toolQty" type="number" min="1" value="1" /></div>
+          <div><label>Serienummer</label><input id="toolSerial" placeholder="Bijv. SN-4471-B" /></div>
           <div><label>Opmerking</label><input id="toolNote" placeholder="Optioneel" /></div>
         </div>
         <div style="margin-top:14px; display:flex; gap:8px;">
@@ -152,7 +153,7 @@
       </div>
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Naam</th><th>Categorie</th><th>Merk/type</th><th>Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
+          <thead><tr><th>Naam</th><th>Categorie</th><th>Merk/type</th><th>Serienummer</th><th>Locatie</th><th>Status</th><th class="actions">Acties</th></tr></thead>
           <tbody id="toolRows"></tbody>
         </table>
       </div>
@@ -272,7 +273,7 @@ function renderStats() {
 function renderTools() {
   const q = document.getElementById('search').value.toLowerCase();
   const rows = tools.filter(t =>
-    !q || [t.name, t.cat, t.brand, t.loc, t.note].some(v => (v || '').toLowerCase().includes(q))
+    !q || [t.name, t.cat, t.brand, t.serial, t.loc, t.note].some(v => (v || '').toLowerCase().includes(q))
   );
   const tb = document.getElementById('toolRows');
   tb.innerHTML = rows.length ? rows.map(t => {
@@ -287,6 +288,7 @@ function renderTools() {
       <td><strong>${esc(t.name)}</strong>${t.qty > 1 ? ` ×${t.qty}` : ''}${t.note ? `<br><small style="color:var(--muted)">${esc(t.note)}</small>` : ''}</td>
       <td>${esc(t.cat || '—')}</td>
       <td>${esc(t.brand || '—')}</td>
+      <td>${esc(t.serial || '—')}</td>
       <td>${esc(t.loc || '—')}</td>
       <td>${status}</td>
       <td class="actions">
@@ -295,7 +297,7 @@ function renderTools() {
         <button class="btn small danger" onclick="delTool('${t.id}')">Verwijder</button>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="6" class="empty">Nog geen gereedschap toegevoegd.</td></tr>`;
+  }).join('') : `<tr><td colspan="7" class="empty">Nog geen gereedschap toegevoegd.</td></tr>`;
   renderStats();
   renderLoanToolOptions();
 }
@@ -306,6 +308,7 @@ document.getElementById('toolForm').addEventListener('submit', e => {
     name: toolName.value.trim(),
     cat: toolCat.value.trim(),
     brand: toolBrand.value.trim(),
+    serial: toolSerial.value.trim(),
     loc: toolLoc.value.trim(),
     qty: Math.max(1, parseInt(toolQty.value) || 1),
     note: toolNote.value.trim(),
@@ -331,6 +334,7 @@ function editTool(id) {
   toolEditId = id;
   toolId.value = t.id; toolName.value = t.name; toolCat.value = t.cat || '';
   toolBrand.value = t.brand || ''; toolLoc.value = t.loc || '';
+  toolSerial.value = t.serial || '';
   toolQty.value = t.qty || 1; toolNote.value = t.note || '';
   toolFormTitle.textContent = 'Gereedschap wijzigen';
   toolCancel.hidden = false;
