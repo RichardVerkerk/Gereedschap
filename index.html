@@ -402,6 +402,7 @@
           <option value="overdue">Te laat / herinnering</option>
           <option value="returned">Teruggebracht</option>
           <option value="lost">Vermist</option>
+          <option value="retired">Afgeschreven</option>
         </select>
         <select id="loanSort" aria-label="Sorteer uitleeningen">
           <option value="dateOut-desc">Uitleendatum (nieuwste eerst)</option>
@@ -443,7 +444,7 @@ const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('nl-NL') : '�
 const uid = () => Date.now() + '' + Math.floor(Math.random() * 1000);
 
 function openLoans(toolId) {
-  return loans.filter(l => l.toolId === toolId && !l.dateIn && !l.lostAt);
+  return loans.filter(l => l.toolId === toolId && !l.dateIn && !l.lostAt && !l.retiredAt);
 }
 
 // ---------- Categorieën ----------
@@ -511,7 +512,7 @@ function renderPeople() {
   document.getElementById('personList').innerHTML = people.map(p => `<option value="${esc(p)}"></option>`).join('');
   el.innerHTML = people.length ? people.map(p => {
     const n = loans.filter(l => l.who === p).length;
-    const open = loans.filter(l => l.who === p && !l.dateIn).length;
+    const open = loans.filter(l => l.who === p && !l.dateIn && !l.lostAt && !l.retiredAt).length;
     return `<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
       <span style="flex:1">${esc(p)} <small style="color:var(--muted)">(${n} uitleening(en)${open ? `, ${open} nu buiten` : ''})</small></span>
       <button class="btn small secondary" onclick="renamePerson('${esc(p).replace(/'/g, "\\'")}')">Hernoem</button>
@@ -541,7 +542,7 @@ function renamePerson(oldName) {
 }
 
 function delPerson(name) {
-  const open = loans.filter(l => l.who === name && !l.dateIn).length;
+  const open = loans.filter(l => l.who === name && !l.dateIn && !l.lostAt && !l.retiredAt).length;
   if (!confirm('Persoon "' + name + '" uit de lijst verwijderen?' + (open ? ` Let op: ${open} uitleening(en) zijn nog open.` : ''))) return;
   people = people.filter(p => p !== name);
   savePeople(); renderPeople();
@@ -557,7 +558,7 @@ function daysOut(l) {
 }
 
 function isOverdue(l) {
-  if (l.dateIn || l.lostAt) return false;
+  if (l.dateIn || l.lostAt || l.retiredAt) return false;
   if (l.dateDue && l.dateDue < new Date().toISOString().slice(0, 10)) return true;
   return daysOut(l) >= remindDays;
 }
@@ -617,7 +618,7 @@ document.querySelectorAll('.tabs button').forEach(btn => {
 
 // ---------- Stats ----------
 function renderStats() {
-  const out = loans.filter(l => !l.dateIn).length;
+  const out = loans.filter(l => !l.dateIn && !l.lostAt && !l.retiredAt).length;
   const activeTools = tools.filter(t => !t.retired).length;
   const el = document.getElementById('stats');
   el.innerHTML = `
@@ -771,26 +772,32 @@ function retireTool(id) {
   if (!t || t.retired) return;
   const open = openLoans(id);
   if (open.length && !confirm(
-    `Dit gereedschap staat nog uitgeleend aan ${open.map(l => l.who).join(', ')}.
-
-
-Wil je de lopende uitle(e)nregistratie(s) als VERMIST afsluiten en het gereedschap afschrijven? De uitleenhistorie blijft bewaard.`
+    `Dit gereedschap staat nog uitgeleend aan ${open.map(l => l.who).join(', ')}.\n\nJe kunt het toch afschrijven. De uitleenregistratie wordt afgesloten. Kies bij de reden 'Vermist' als het gereedschap daadwerkelijk kwijt is; bij iedere andere reden wordt de uitleenstatus 'Afgeschreven'. Doorgaan?`
   )) return;
-  const reason = prompt('Waarom wordt dit gereedschap afgeschreven? (bijv. kapot, weggegooid, vermist, verkocht)', open.length ? 'Vermist' : 'Kapot');
+  const reason = prompt('Waarom wordt dit gereedschap afgeschreven? (bijv. kapot, weggegooid, vermist, verkocht)', 'Kapot');
   if (!reason || !reason.trim()) return;
+  const cleanReason = reason.trim();
+  const isLost = cleanReason.toLocaleLowerCase('nl') === 'vermist';
   const note = prompt('Extra toelichting (optioneel):', '') || '';
   const today = new Date().toISOString().slice(0, 10);
   if (open.length) {
-    const lostNote = `Als vermist afgesloten bij afschrijving${note.trim() ? ': ' + note.trim() : ''}`;
-    open.forEach(l => { l.lostAt = today; l.lostNote = lostNote; });
+    open.forEach(l => {
+      if (isLost) {
+        l.lostAt = today;
+        l.lostNote = `Vermist bij afschrijving${note.trim() ? ': ' + note.trim() : ''}`;
+      } else {
+        l.retiredAt = today;
+        l.retiredReason = cleanReason;
+        l.retiredNote = note.trim();
+      }
+    });
   }
   t.retired = true;
   t.retiredAt = today;
-  t.retiredReason = reason.trim();
+  t.retiredReason = cleanReason;
   t.retiredNote = note.trim();
-  save(); renderTools(); renderRetired(); renderLoans(); renderOverdue();
+  save(); renderTools(); renderRetired(); renderLoans(); renderOverdue(); renderPeople();
 }
-
 function reactivateTool(id) {
   const t = tools.find(x => x.id === id);
   if (!t || !confirm('Dit gereedschap weer toevoegen aan de actieve gereedschappen?')) return;
@@ -857,7 +864,7 @@ function renderLoans() {
   if (peopleInLoans.includes(currentPerson)) personSelect.value = currentPerson;
 
   const getTool = l => tools.find(x => x.id === l.toolId);
-  const getLoanStatus = l => l.lostAt ? 'lost' : !l.dateIn ? (isOverdue(l) ? 'overdue' : 'open') : 'returned';
+  const getLoanStatus = l => l.lostAt ? 'lost' : l.retiredAt ? 'retired' : !l.dateIn ? (isOverdue(l) ? 'overdue' : 'open') : 'returned';
   const compareText = (a, b) => String(a || '').localeCompare(String(b || ''), 'nl', { sensitivity: 'base' });
   const matchesSearch = l => {
     const t = getTool(l);
@@ -892,6 +899,8 @@ function renderLoans() {
     const t = getTool(l);
     const status = l.lostAt
       ? `<span class="badge overdue">Vermist sinds ${fmt(l.lostAt)}</span>`
+      : l.retiredAt
+      ? `<span class="badge uitleen">Afgeschreven sinds ${fmt(l.retiredAt)}</span>`
       : l.dateIn
       ? `<span class="badge terug">Terug op ${fmt(l.dateIn)}</span>`
       : isOverdue(l)
@@ -904,7 +913,7 @@ function renderLoans() {
       <td class="col-opt">${l.dateDue ? fmt(l.dateDue) : '—'}</td>
       <td class="col-md">${l.dateIn ? fmt(l.dateIn) : '—'}</td>
       <td>${status}</td>
-      <td class="col-opt">${esc(l.note || '')}${l.lostNote ? `<br><small style="color:var(--muted)">${esc(l.lostNote)}</small>` : ''}</td>
+      <td class="col-opt">${esc(l.note || '')}${l.lostNote ? `<br><small style="color:var(--muted)">${esc(l.lostNote)}</small>` : ''}${l.retiredReason ? `<br><small style="color:var(--muted)">Reden afschrijving: ${esc(l.retiredReason)}${l.retiredNote ? ' — ' + esc(l.retiredNote) : ''}</small>` : ''}</td>
       <td class="actions">
         ${!l.dateIn && !l.lostAt ? `<button class="btn small" onclick="markReturned('${l.id}')">Terug</button>` : ''}
         <button class="btn small secondary" onclick="editLoan('${l.id}')">Wijzig</button>
