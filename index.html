@@ -302,6 +302,18 @@
     </div>
   </section>
 
+  <!-- AFGESCHREVEN GEREEDSCHAP -->
+  <section id="tab-retired" hidden>
+    <div class="card">
+      <div class="toolbar"><h2 style="margin:0">Afgeschreven gereedschap</h2><span class="filter-count" id="retiredCount"></span></div>
+      <p style="color:var(--muted); margin-top:0">Deze gereedschappen zijn niet meer in gebruik. De gegevens en uitleenhistorie blijven bewaard.</p>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Naam</th><th>Reden</th><th>Datum</th><th>Opmerking</th><th>Acties</th></tr></thead>
+        <tbody id="retiredRows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
   <!-- TOEVOEGEN -->
   <section id="tab-add" hidden>
     <div class="card">
@@ -388,6 +400,7 @@
           <option value="open">Lopend / uitgeleend</option>
           <option value="overdue">Te laat / herinnering</option>
           <option value="returned">Teruggebracht</option>
+          <option value="lost">Vermist</option>
         </select>
         <select id="loanSort" aria-label="Sorteer uitleeningen">
           <option value="dateOut-desc">Uitleendatum (nieuwste eerst)</option>
@@ -429,7 +442,7 @@ const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('nl-NL') : '�
 const uid = () => Date.now() + '' + Math.floor(Math.random() * 1000);
 
 function openLoans(toolId) {
-  return loans.filter(l => l.toolId === toolId && !l.dateIn);
+  return loans.filter(l => l.toolId === toolId && !l.dateIn && !l.lostAt);
 }
 
 // ---------- Categorieën ----------
@@ -543,7 +556,7 @@ function daysOut(l) {
 }
 
 function isOverdue(l) {
-  if (l.dateIn) return false;
+  if (l.dateIn || l.lostAt) return false;
   if (l.dateDue && l.dateDue < new Date().toISOString().slice(0, 10)) return true;
   return daysOut(l) >= remindDays;
 }
@@ -604,9 +617,10 @@ document.querySelectorAll('.tabs button').forEach(btn => {
 // ---------- Stats ----------
 function renderStats() {
   const out = loans.filter(l => !l.dateIn).length;
+  const activeTools = tools.filter(t => !t.retired).length;
   const el = document.getElementById('stats');
   el.innerHTML = `
-    <div class="stat"><div class="num">${tools.length}</div><div class="lbl">Gereedschappen</div></div>
+    <div class="stat"><div class="num">${activeTools}</div><div class="lbl">Actieve gereedschappen</div></div>
     <div class="stat highlight"><div class="num">${out}</div><div class="lbl">Nu uitgeleend</div></div>`;
 }
 
@@ -641,6 +655,7 @@ function renderTools() {
   };
   const compareText = (a, b) => String(a || '').localeCompare(String(b || ''), 'nl', { sensitivity: 'base' });
   let rows = tools.filter(t =>
+    !t.retired &&
     matchesSearch(t) &&
     (!catFilter || t.cat === catFilter) &&
     (!locFilter || t.loc === locFilter) &&
@@ -686,7 +701,8 @@ function renderTools() {
           ? `<button class="btn small" onclick="returnTool('${t.id}')" title="Markeer als terugontvangen">⬅ Terug</button>`
           : `<button class="btn small" onclick="startLoan('${t.id}')">Uitlenen</button>`}
         <button class="btn small secondary" onclick="editTool('${t.id}')">Wijzig</button>
-        <button class="btn small danger" onclick="delTool('${t.id}')">Verwijder</button>
+        <button class="btn small secondary" onclick="retireTool('${t.id}')">Afgeschreven</button>
+        <button class="btn small danger" onclick="delTool('${t.id}')" title="Verwijdert ook de uitleenhistorie definitief">Verwijder</button>
       </td>
     </tr>
     <tr class="detail-row" id="detail-${t.id}" hidden>
@@ -703,7 +719,7 @@ function renderTools() {
     </tr>`;
   }).join('') : `<tr><td colspan="7" class="empty">Geen gereedschap gevonden met deze zoek- en filterinstellingen.</td></tr>`;
   document.getElementById('toolFilterCount').textContent =
-    `${rows.length} van ${tools.length} gereedschappen weergegeven`;
+    `${rows.length} van ${tools.filter(t => !t.retired).length} actieve gereedschappen weergegeven`;
   renderStats();
   renderLoanToolOptions();
 }
@@ -749,8 +765,54 @@ function editTool(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function retireTool(id) {
+  const t = tools.find(x => x.id === id);
+  if (!t || t.retired) return;
+  const open = openLoans(id);
+  if (open.length && !confirm(
+    `Dit gereedschap staat nog uitgeleend aan ${open.map(l => l.who).join(', ')}.
+
+
+Wil je de lopende uitle(e)nregistratie(s) als VERMIST afsluiten en het gereedschap afschrijven? De uitleenhistorie blijft bewaard.`
+  )) return;
+  const reason = prompt('Waarom wordt dit gereedschap afgeschreven? (bijv. kapot, weggegooid, vermist, verkocht)', open.length ? 'Vermist' : 'Kapot');
+  if (!reason || !reason.trim()) return;
+  const note = prompt('Extra toelichting (optioneel):', '') || '';
+  const today = new Date().toISOString().slice(0, 10);
+  if (open.length) {
+    const lostNote = `Als vermist afgesloten bij afschrijving${note.trim() ? ': ' + note.trim() : ''}`;
+    open.forEach(l => { l.lostAt = today; l.lostNote = lostNote; });
+  }
+  t.retired = true;
+  t.retiredAt = today;
+  t.retiredReason = reason.trim();
+  t.retiredNote = note.trim();
+  save(); renderTools(); renderRetired(); renderLoans(); renderOverdue();
+}
+
+function reactivateTool(id) {
+  const t = tools.find(x => x.id === id);
+  if (!t || !confirm('Dit gereedschap weer toevoegen aan de actieve gereedschappen?')) return;
+  delete t.retired; delete t.retiredAt; delete t.retiredReason; delete t.retiredNote;
+  save(); renderTools(); renderRetired(); renderLoans();
+}
+
+function renderRetired() {
+  const retired = tools.filter(t => t.retired).sort((a,b) => (b.retiredAt || '').localeCompare(a.retiredAt || ''));
+  document.getElementById('retiredCount').textContent = `${retired.length} afgeschreven item(s)`;
+  document.getElementById('retiredRows').innerHTML = retired.length ? retired.map(t => {
+    const historyCount = loans.filter(l => l.toolId === t.id).length;
+    return `<tr>
+      <td><strong>${esc(t.name)}</strong>${t.brand ? `<br><small>${esc(t.brand)}</small>` : ''}</td>
+      <td>${esc(t.retiredReason || '—')}</td><td>${fmt(t.retiredAt)}</td>
+      <td>${esc(t.retiredNote || '—')}<br><small style="color:var(--muted)">${historyCount} uitle(e)nregistratie(s)</small></td>
+      <td class="actions"><button class="btn small secondary" onclick="reactivateTool('${t.id}')">Heractiveren</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">Er is nog geen gereedschap afgeschreven.</td></tr>';
+}
+
 function delTool(id) {
-  if (!confirm('Dit gereedschap en de bijbehorende uitleeningen verwijderen?')) return;
+  if (!confirm('Let op: dit verwijdert het gereedschap én alle bijbehorende uitleenhistorie definitief. Gebruik liever “Afgeschreven” om de historie te bewaren. Doorgaan?')) return;
   tools = tools.filter(t => t.id !== id);
   loans = loans.filter(l => l.toolId !== id);
   save(); renderTools(); renderLoans();
@@ -773,9 +835,9 @@ document.getElementById('clearToolFilters').addEventListener('click', () => {
 function renderLoanToolOptions() {
   const sel = document.getElementById('loanTool');
   const cur = sel.value;
-  sel.innerHTML = tools.map(t => `<option value="${t.id}">${esc(t.name)}${t.brand ? ' – ' + esc(t.brand) : ''}</option>`).join('') ||
+  sel.innerHTML = tools.filter(t => !t.retired).map(t => `<option value="${t.id}">${esc(t.name)}${t.brand ? ' – ' + esc(t.brand) : ''}</option>`).join('') ||
     '<option value="">— eerst gereedschap toevoegen —</option>';
-  if (cur && tools.some(t => t.id === cur)) sel.value = cur;
+  if (cur && tools.some(t => t.id === cur && !t.retired)) sel.value = cur;
 }
 
 function renderLoans() {
@@ -794,11 +856,11 @@ function renderLoans() {
   if (peopleInLoans.includes(currentPerson)) personSelect.value = currentPerson;
 
   const getTool = l => tools.find(x => x.id === l.toolId);
-  const getLoanStatus = l => !l.dateIn ? (isOverdue(l) ? 'overdue' : 'open') : 'returned';
+  const getLoanStatus = l => l.lostAt ? 'lost' : !l.dateIn ? (isOverdue(l) ? 'overdue' : 'open') : 'returned';
   const compareText = (a, b) => String(a || '').localeCompare(String(b || ''), 'nl', { sensitivity: 'base' });
   const matchesSearch = l => {
     const t = getTool(l);
-    return !q || [t?.name, t?.brand, l.who, l.note, l.dateOut, l.dateDue, l.dateIn]
+    return !q || [t?.name, t?.brand, l.who, l.note, l.lostNote, l.dateOut, l.dateDue, l.dateIn]
       .some(v => String(v || '').toLocaleLowerCase('nl').includes(q));
   };
   let sorted = loans.filter(l =>
@@ -827,21 +889,23 @@ function renderLoans() {
 
   tb.innerHTML = sorted.length ? sorted.map(l => {
     const t = getTool(l);
-    const status = l.dateIn
+    const status = l.lostAt
+      ? `<span class="badge overdue">Vermist sinds ${fmt(l.lostAt)}</span>`
+      : l.dateIn
       ? `<span class="badge terug">Terug op ${fmt(l.dateIn)}</span>`
       : isOverdue(l)
       ? `<span class="badge overdue">⚠ ${daysOut(l)} dagen buiten</span>`
       : `<span class="badge uitleen">Buiten</span>`;
     return `<tr>
-      <td><strong>${esc(t ? t.name : '?(verwijderd)')}</strong></td>
+      <td><strong>${esc(t ? t.name : '?(verwijderd)')}</strong>${t?.retired ? '<br><small style="color:var(--muted)">Afgeschreven</small>' : ''}</td>
       <td>${esc(l.who)}</td>
       <td class="col-md">${fmt(l.dateOut)}</td>
       <td class="col-opt">${l.dateDue ? fmt(l.dateDue) : '—'}</td>
       <td class="col-md">${l.dateIn ? fmt(l.dateIn) : '—'}</td>
       <td>${status}</td>
-      <td class="col-opt">${esc(l.note || '')}</td>
+      <td class="col-opt">${esc(l.note || '')}${l.lostNote ? `<br><small style="color:var(--muted)">${esc(l.lostNote)}</small>` : ''}</td>
       <td class="actions">
-        ${!l.dateIn ? `<button class="btn small" onclick="markReturned('${l.id}')">Terug</button>` : ''}
+        ${!l.dateIn && !l.lostAt ? `<button class="btn small" onclick="markReturned('${l.id}')">Terug</button>` : ''}
         <button class="btn small secondary" onclick="editLoan('${l.id}')">Wijzig</button>
         <button class="btn small danger" onclick="delLoan('${l.id}')">Verwijder</button>
       </td>
@@ -986,7 +1050,7 @@ document.getElementById('importFile').addEventListener('change', e => {
       }
       save();
       resetToolForm(); resetLoanForm();
-      renderTools(); renderLoans(); renderOverdue();
+      renderTools(); renderRetired(); renderLoans(); renderOverdue();
       alert('Importeren gelukt: ' + data.tools.length + ' gereedschappen en ' + data.loans.length + ' uitleeningen in het bestand.');
     } catch (err) {
       alert('Importeren mislukt: dit lijkt geen geldig exportbestand van de Gereedschapsregister.');
@@ -999,6 +1063,7 @@ document.getElementById('importFile').addEventListener('change', e => {
 // ---------- Init ----------
 loanOut.value = new Date().toISOString().slice(0, 10);
 renderTools();
+renderRetired();
 renderLoans();
 renderCats();
 renderPeople();
