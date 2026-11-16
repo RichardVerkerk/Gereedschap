@@ -129,6 +129,20 @@
   #remindDays { max-width: 80px; display: inline-block; width: auto; padding: 6px 8px; }
   .reminder-setting { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); flex-wrap: wrap; }
   .empty { color: var(--muted); font-style: italic; padding: 16px 8px; }
+  .table-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    align-items: center;
+    margin: 8px 0 14px;
+  }
+  .table-filters input, .table-filters select { min-width: 0; }
+  .filter-count { color: var(--muted); font-size: .78rem; margin: 0 0 8px; }
+  @media (max-width: 640px) {
+    .table-filters { grid-template-columns: 1fr 1fr; }
+    .table-filters .btn { width: 100%; }
+  }
+
   .toolbar { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   #search { max-width: 260px; }
   .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -642,7 +656,14 @@ function renderTools() {
     'qty-desc': (a,b) => (Number(b.qty)||1) - (Number(a.qty)||1),
     'qty-asc': (a,b) => (Number(a.qty)||1) - (Number(b.qty)||1)
   };
-  rows.sort(sorters[sort] || sorters['name-asc']);
+  // Uitgeleend of te laat gereedschap altijd bovenaan; gekozen sortering binnen groepen.
+  const toolStatusRank = t => getToolStatus(t) === 'available' ? 1 : 0;
+  const selectedToolSorter = sorters[sort] || sorters['name-asc'];
+  rows.sort((a, b) =>
+    (toolStatusRank(a) - toolStatusRank(b)) ||
+    selectedToolSorter(a, b) ||
+    compareText(a.name, b.name)
+  );
 
   const tb = document.getElementById('toolRows');
   tb.innerHTML = rows.length ? rows.map(t => {
@@ -795,7 +816,14 @@ function renderLoans() {
     'dateDue-desc': (a,b) => (b.dateDue || '').localeCompare(a.dateDue || ''),
     'status-asc': (a,b) => compareText(getLoanStatus(a), getLoanStatus(b))
   };
-  sorted.sort(sorters[sort] || sorters['dateOut-desc']);
+  // Lopende/te late uitleningen altijd bovenaan; teruggebrachte items onderaan.
+  const loanStatusRank = l => getLoanStatus(l) === 'returned' ? 1 : 0;
+  const selectedLoanSorter = sorters[sort] || sorters['dateOut-desc'];
+  sorted.sort((a, b) =>
+    (loanStatusRank(a) - loanStatusRank(b)) ||
+    selectedLoanSorter(a, b) ||
+    (b.dateOut || '').localeCompare(a.dateOut || '')
+  );
 
   tb.innerHTML = sorted.length ? sorted.map(l => {
     const t = getTool(l);
